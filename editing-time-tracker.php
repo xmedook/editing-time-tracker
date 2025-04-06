@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Editing Time Tracker
  * Description: Tracks time spent editing posts and pages
- * Version: 1.0
+ * Version: 1.0.1
  * Author: koode.mx
  * Text Domain: editing-time-tracker
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('ETT_VERSION', '1.0');
+define('ETT_VERSION', '1.0.1');
 define('ETT_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('ETT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('ETT_PLUGIN_BASENAME', plugin_basename(__FILE__));

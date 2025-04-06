@@ -118,7 +118,7 @@ class Editing_Time_Tracker_Reports {
                     'noData' => __('No data available for the selected period.', 'editing-time-tracker'),
                     'error' => __('Error loading data. Please try again.', 'editing-time-tracker'),
                     'loading' => __('Loading...', 'editing-time-tracker'),
-                    'dateFormat' => _x('MM d, yy', 'jQuery UI datepicker date format', 'editing-time-tracker')
+                    'dateFormat' => _x('yy-mm-dd', 'jQuery UI datepicker date format', 'editing-time-tracker')
                 )
             )
         );
@@ -147,12 +147,14 @@ class Editing_Time_Tracker_Reports {
         $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : 0;
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
         
-        // Validate dates
-        if (empty($start_date) || !strtotime($start_date)) {
+        // Validate and normalize dates
+        $start_date = $this->normalize_date_format($start_date);
+        if (empty($start_date)) {
             $start_date = date('Y-m-d', strtotime('-30 days'));
         }
         
-        if (empty($end_date) || !strtotime($end_date)) {
+        $end_date = $this->normalize_date_format($end_date);
+        if (empty($end_date)) {
             $end_date = date('Y-m-d');
         }
         
@@ -603,6 +605,33 @@ class Editing_Time_Tracker_Reports {
                 )
             )
         );
+    }
+
+    /**
+     * Normalize date format to Y-m-d
+     * 
+     * @since    1.0.0
+     * @param    string    $date_string    The date string to normalize
+     * @return   string                    Normalized date in Y-m-d format or empty string if invalid
+     */
+    private function normalize_date_format($date_string) {
+        if (empty($date_string)) {
+            return '';
+        }
+        
+        // Check if the date is already in Y-m-d format
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_string)) {
+            return $date_string;
+        }
+        
+        // Try to parse the date using strtotime
+        $timestamp = strtotime($date_string);
+        if ($timestamp === false) {
+            return '';
+        }
+        
+        // Return the date in Y-m-d format
+        return date('Y-m-d', $timestamp);
     }
 
     /**

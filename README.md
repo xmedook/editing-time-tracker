@@ -31,6 +31,7 @@ Editing Time Tracker is a comprehensive solution for monitoring and analyzing th
 1. Navigate to 'Tools' > 'Editing Time Reports' in the WordPress admin
 2. Select the report type (Overview, User, or Post)
 3. Apply filters as needed (date range, specific user, specific post)
+   - **Note**: Date filters use the YYYY-MM-DD format (e.g., 2025-04-06)
 4. Click 'Generate Report' to view the data
 
 ### Understanding the Data
@@ -77,6 +78,15 @@ The plugin stores session data in a custom database table with the following inf
 - Final word count
 - Activity summary
 
+### Date Format
+
+The plugin uses the following date format conventions:
+
+- **Input Format**: The date picker uses the YYYY-MM-DD format (e.g., 2025-04-06)
+- **Database Storage**: All dates are stored in MySQL datetime format
+- **Display Format**: Dates are displayed according to the WordPress date format settings
+- **Date Processing**: The plugin includes date normalization to handle various input formats, but the YYYY-MM-DD format is recommended for best results
+
 ## Requirements
 
 - WordPress 5.0 or higher
@@ -98,6 +108,11 @@ Currently, the plugin has specific integration with Elementor. While basic track
 The current version does not include export functionality, but this feature is planned for a future release.
 
 ## Changelog
+
+### 1.0.1
+- Fixed date format handling in reports to consistently use YYYY-MM-DD format
+- Added date format normalization to improve compatibility with different date inputs
+- Updated documentation with date format requirements
 
 ### 1.0.0
 - Initial release
