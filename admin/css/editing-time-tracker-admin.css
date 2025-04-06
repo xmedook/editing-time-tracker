@@ -1,0 +1,169 @@
+/**
+ * Admin-specific styles
+ *
+ * @since      1.0.0
+ */
+
+/* Debug information */
+.ett-debug-info {
+    background: #f9f9f9;
+    border: 1px solid #e5e5e5;
+    padding: 10px;
+    margin-top: 10px;
+    max-height: 300px;
+    overflow: auto;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.ett-debug-info pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.ett-debug-info .ett-debug-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.ett-debug-info .ett-debug-item {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.ett-debug-info .ett-debug-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* Admin notices */
+.ett-admin-notice {
+    position: relative;
+    padding-right: 38px;
+}
+
+.ett-admin-notice .notice-dismiss {
+    position: absolute;
+    top: 0;
+    right: 1px;
+    border: none;
+    margin: 0;
+    padding: 9px;
+    background: none;
+    color: #72777c;
+    cursor: pointer;
+}
+
+/* Settings page */
+.ett-settings-container {
+    max-width: 800px;
+    margin-top: 20px;
+}
+
+.ett-settings-section {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.ett-settings-section h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.ett-settings-field {
+    margin-bottom: 15px;
+}
+
+.ett-settings-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.ett-settings-field input[type="text"],
+.ett-settings-field input[type="number"],
+.ett-settings-field select {
+    width: 100%;
+    max-width: 400px;
+}
+
+.ett-settings-field .description {
+    color: #666;
+    font-style: italic;
+    margin-top: 5px;
+}
+
+/* Post edit screen */
+.ett-post-stats {
+    margin-bottom: 15px;
+}
+
+.ett-post-stats-item {
+    margin-bottom: 8px;
+}
+
+.ett-post-stats-label {
+    font-weight: 600;
+}
+
+.ett-post-stats-value {
+    color: #0073aa;
+}
+
+/* Dashboard widget */
+.ett-dashboard-widget {
+    margin-bottom: 15px;
+}
+
+.ett-dashboard-widget-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ett-dashboard-widget-item:last-child {
+    border-bottom: none;
+}
+
+.ett-dashboard-widget-label {
+    font-weight: 600;
+}
+
+.ett-dashboard-widget-value {
+    color: #0073aa;
+}
+
+.ett-dashboard-widget-footer {
+    margin-top: 15px;
+    text-align: right;
+}
+
+/* Help tooltips */
+.ett-help-tip {
+    color: #666;
+    font-size: 16px;
+    cursor: help;
+    vertical-align: middle;
+    margin-left: 5px;
+}
+
+.ett-help-tip:hover {
+    color: #0073aa;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .ett-settings-field input[type="text"],
+    .ett-settings-field input[type="number"],
+    .ett-settings-field select {
+        max-width: 100%;
+    }
+}
