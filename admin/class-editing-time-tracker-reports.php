@@ -107,6 +107,15 @@ class Editing_Time_Tracker_Reports {
             'all'
         );
         
+        // Enqueue custom CSS to hide the 5th column
+        wp_enqueue_style(
+            $this->plugin_name . '-hide-fifth-column',
+            plugin_dir_url(__FILE__) . 'css/hide-fifth-column.css',
+            array(),
+            $this->version,
+            'all'
+        );
+        
         // Localize script with data and nonce
         wp_localize_script(
             $this->plugin_name . '-reports',
@@ -234,12 +243,6 @@ class Editing_Time_Tracker_Reports {
                 'end_time' => $session->end_time,
                 'duration' => $session->duration,
                 'duration_formatted' => $this->format_duration($session->duration),
-                'initial_content_length' => $session->initial_content_length,
-                'final_content_length' => $session->final_content_length,
-                'content_change' => $session->final_content_length - $session->initial_content_length,
-                'initial_word_count' => $session->initial_word_count,
-                'final_word_count' => $session->final_word_count,
-                'word_change' => $session->final_word_count - $session->initial_word_count,
                 'activity_summary' => $session->activity_summary
             );
             
@@ -361,12 +364,6 @@ class Editing_Time_Tracker_Reports {
                 'end_time' => $session->end_time,
                 'duration' => $session->duration,
                 'duration_formatted' => $this->format_duration($session->duration),
-                'initial_content_length' => $session->initial_content_length,
-                'final_content_length' => $session->final_content_length,
-                'content_change' => $session->final_content_length - $session->initial_content_length,
-                'initial_word_count' => $session->initial_word_count,
-                'final_word_count' => $session->final_word_count,
-                'word_change' => $session->final_word_count - $session->initial_word_count,
                 'activity_summary' => $session->activity_summary
             );
             

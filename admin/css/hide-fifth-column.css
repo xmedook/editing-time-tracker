@@ -1,0 +1,4 @@
+/* Hide the 5th column in the Editing Sessions tables */
+.ett-report-table-section table tr td:nth-child(5) {
+    display: none !important;
+}

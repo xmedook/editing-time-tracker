@@ -108,10 +108,8 @@ class Editing_Time_Tracker_Admin {
         switch ($tracking_status['status']) {
             case 'tracked_full':
                 $message = sprintf(
-                    __('Editing session tracked successfully for "%s". Changes: %+d characters, %+d words. Duration: %s.', 'editing-time-tracker'),
+                    __('Editing session tracked successfully for "%s". Duration: %s.', 'editing-time-tracker'),
                     esc_html($post_title),
-                    intval($tracking_status['char_diff']),
-                    intval($tracking_status['word_diff']),
                     $this->format_duration($tracking_status['duration'])
                 );
                 $class = 'notice-success';
@@ -119,7 +117,7 @@ class Editing_Time_Tracker_Admin {
                 
             case 'tracked_duration_only':
                 $message = sprintf(
-                    __('Editing session tracked for "%s" based on duration only. No significant content changes detected.', 'editing-time-tracker'),
+                    __('Editing session tracked for "%s" based on duration only.', 'editing-time-tracker'),
                     esc_html($post_title)
                 );
                 $class = 'notice-info';
@@ -127,7 +125,7 @@ class Editing_Time_Tracker_Admin {
                 
             case 'tracked_changes_only':
                 $message = sprintf(
-                    __('Editing session tracked for "%s" based on content changes only. Short duration: %s.', 'editing-time-tracker'),
+                    __('Editing session tracked for "%s" based on Elementor changes. Short duration: %s.', 'editing-time-tracker'),
                     esc_html($post_title),
                     $this->format_duration($tracking_status['duration'])
                 );
@@ -136,7 +134,7 @@ class Editing_Time_Tracker_Admin {
                 
             case 'skipped_no_changes_short_duration':
                 $message = sprintf(
-                    __('Editing session not tracked for "%s". No significant changes and duration too short.', 'editing-time-tracker'),
+                    __('Editing session not tracked for "%s". No significant Elementor changes and duration too short.', 'editing-time-tracker'),
                     esc_html($post_title)
                 );
                 $class = 'notice-warning';

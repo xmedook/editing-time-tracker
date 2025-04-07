@@ -246,13 +246,12 @@
                         <td>${escapeHtml(session.post_title)}</td>
                         <td>${formatDateTime(session.start_time)}</td>
                         <td>${session.duration_formatted}</td>
-                        <td>${session.word_change > 0 ? '+' : ''}${session.word_change}</td>
                         <td>${escapeHtml(session.activity_summary)}</td>
                     </tr>
                 `);
             });
         } else {
-            sessionsTable.append(`<tr><td colspan="5">${ettReportsData.strings.noData}</td></tr>`);
+                sessionsTable.append(`<tr><td colspan="4">${ettReportsData.strings.noData}</td></tr>`);
         }
     }
 
@@ -308,13 +307,12 @@
                         <td>${escapeHtml(session.user_name)}</td>
                         <td>${formatDateTime(session.start_time)}</td>
                         <td>${session.duration_formatted}</td>
-                        <td>${session.word_change > 0 ? '+' : ''}${session.word_change}</td>
                         <td>${escapeHtml(session.activity_summary)}</td>
                     </tr>
                 `);
             });
         } else {
-            sessionsTable.append(`<tr><td colspan="5">${ettReportsData.strings.noData}</td></tr>`);
+                sessionsTable.append(`<tr><td colspan="4">${ettReportsData.strings.noData}</td></tr>`);
         }
     }
 

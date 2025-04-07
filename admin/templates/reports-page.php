@@ -46,6 +46,7 @@ $start_date = date('Y-m-d', strtotime('-30 days'));
                             <option value="post"><?php _e('Post Report', 'editing-time-tracker'); ?></option>
                         </select>
                     </div>
+
                     
                     <div class="ett-filter-section ett-user-filter" style="display: none;">
                         <label for="ett-user-id"><?php _e('User', 'editing-time-tracker'); ?></label>
@@ -219,8 +220,8 @@ $start_date = date('Y-m-d', strtotime('-30 days'));
                                         <th><?php _e('Post', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Start Time', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Duration', 'editing-time-tracker'); ?></th>
-                                        <th><?php _e('Word Change', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Activity', 'editing-time-tracker'); ?></th>
+                                        <th style="display:none;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="ett-user-sessions">
@@ -277,8 +278,8 @@ $start_date = date('Y-m-d', strtotime('-30 days'));
                                         <th><?php _e('User', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Start Time', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Duration', 'editing-time-tracker'); ?></th>
-                                        <th><?php _e('Word Change', 'editing-time-tracker'); ?></th>
                                         <th><?php _e('Activity', 'editing-time-tracker'); ?></th>
+                                        <th style="display:none;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="ett-post-sessions">

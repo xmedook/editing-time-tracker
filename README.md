@@ -72,10 +72,6 @@ The plugin stores session data in a custom database table with the following inf
 - Start time
 - End time
 - Duration
-- Initial content length
-- Final content length
-- Initial word count
-- Final word count
 - Activity summary
 
 ### Date Format
@@ -108,6 +104,12 @@ Currently, the plugin has specific integration with Elementor. While basic track
 The current version does not include export functionality, but this feature is planned for a future release.
 
 ## Changelog
+
+### 1.1.0
+- Removed content/word change metrics to focus on time tracking
+- Simplified database schema
+- Improved Elementor integration
+- Enhanced performance by reducing data collection
 
 ### 1.0.1
 - Fixed date format handling in reports to consistently use YYYY-MM-DD format

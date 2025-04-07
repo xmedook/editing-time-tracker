@@ -32,6 +32,9 @@ class Editing_Time_Tracker_DB {
     public function __construct() {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'editing_sessions';
+        
+        // Check if we need to migrate the database
+        $this->maybe_migrate();
     }
 
     /**
@@ -53,10 +56,6 @@ class Editing_Time_Tracker_DB {
             start_time datetime NOT NULL,
             end_time datetime NOT NULL,
             duration int(11) unsigned NOT NULL,
-            initial_content_length int(11) unsigned NOT NULL DEFAULT 0,
-            final_content_length int(11) unsigned NOT NULL DEFAULT 0,
-            initial_word_count int(11) unsigned NOT NULL DEFAULT 0,
-            final_word_count int(11) unsigned NOT NULL DEFAULT 0,
             activity_summary text NOT NULL,
             PRIMARY KEY  (id),
             KEY user_id (user_id),
@@ -65,6 +64,48 @@ class Editing_Time_Tracker_DB {
         
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
+        
+        // Set the current version
+        update_option('ett_db_version', '1.1.0');
+    }
+
+    /**
+     * Check if database migration is needed
+     *
+     * @since    1.1.0
+     */
+    private function maybe_migrate() {
+        $current_version = get_option('ett_db_version', '1.0.0');
+        
+        if (version_compare($current_version, '1.1.0', '<')) {
+            $this->migrate_remove_content_metrics();
+        }
+    }
+
+    /**
+     * Migrate database to remove content metrics columns
+     *
+     * @since    1.1.0
+     */
+    public function migrate_remove_content_metrics() {
+        global $wpdb;
+        
+        // Remove columns
+        $columns_to_remove = [
+            'initial_content_length',
+            'final_content_length',
+            'initial_word_count',
+            'final_word_count'
+        ];
+        
+        foreach ($columns_to_remove as $column) {
+            if ($wpdb->get_var("SHOW COLUMNS FROM {$this->table_name} LIKE '$column'")) {
+                $wpdb->query("ALTER TABLE {$this->table_name} DROP COLUMN $column");
+            }
+        }
+        
+        // Update version
+        update_option('ett_db_version', '1.1.0');
     }
 
     /**
