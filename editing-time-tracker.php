@@ -1,11 +1,15 @@
 <?php
 /**
  * Plugin Name: Editing Time Tracker
+ * Plugin URI: https://koode.mx
  * Description: Tracks time spent editing posts and pages
  * Version: 1.1.0
  * Author: koode.mx
+ * Author URI: https://koode.mx
  * Text Domain: editing-time-tracker
  * Domain Path: /languages
+ * License: GPL-2.0+
+ * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
  */
 
 // If this file is called directly, abort.
