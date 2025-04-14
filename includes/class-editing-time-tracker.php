@@ -75,6 +75,7 @@ class Editing_Time_Tracker {
      * - Editing_Time_Tracker_Session_Manager. Manages editing sessions.
      * - Editing_Time_Tracker_Elementor_Tracker. Handles Elementor integration.
      * - Editing_Time_Tracker_Reports. Handles reporting functionality.
+     * - Editing_Time_Tracker_Integrations. Handles integration with external services.
      *
      * @since    1.0.0
      * @access   private
@@ -106,6 +107,16 @@ class Editing_Time_Tracker {
          * The class responsible for Elementor integration.
          */
         require_once ETT_PLUGIN_DIR . 'includes/class-editing-time-tracker-elementor.php';
+        
+        /**
+         * The class responsible for direct script loading.
+         */
+        require_once ETT_PLUGIN_DIR . 'includes/class-editing-time-tracker-direct-loader.php';
+        
+        /**
+         * The class responsible for AJAX handling.
+         */
+        require_once ETT_PLUGIN_DIR . 'includes/class-editing-time-tracker-ajax-handler.php';
 
         /**
          * The class responsible for defining all actions that occur in the admin area.
@@ -116,6 +127,11 @@ class Editing_Time_Tracker {
          * The class responsible for reporting functionality.
          */
         require_once ETT_PLUGIN_DIR . 'admin/class-editing-time-tracker-reports.php';
+        
+        /**
+         * The class responsible for integrations with external services.
+         */
+        require_once ETT_PLUGIN_DIR . 'includes/class-editing-time-tracker-integrations.php';
 
         $this->loader = new Editing_Time_Tracker_Loader();
     }
@@ -142,8 +158,21 @@ class Editing_Time_Tracker {
      * @access   private
      */
     private function define_admin_hooks() {
+        // Initialize the session manager
+        $session_manager = new Editing_Time_Tracker_Session_Manager();
+        
         // Initialize the admin class
         $plugin_admin = new Editing_Time_Tracker_Admin($this->get_plugin_name(), $this->get_version());
+        
+        // Initialize integrations
+        $integrations = new Editing_Time_Tracker_Integrations();
+        $integrations->init();
+        
+        // Initialize the direct loader
+        $direct_loader = new Editing_Time_Tracker_Direct_Loader($session_manager);
+        
+        // Initialize the AJAX handler
+        $ajax_handler = new Editing_Time_Tracker_AJAX_Handler($session_manager);
         
         // Admin menu and settings
         $this->loader->add_action('admin_menu', $plugin_admin, 'register_admin_menu');
@@ -152,9 +181,6 @@ class Editing_Time_Tracker {
         // Enqueue admin styles and scripts
         $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_styles');
         $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts');
-        
-        // Initialize the session manager
-        $session_manager = new Editing_Time_Tracker_Session_Manager();
         
         // Standard WordPress editor hooks
         $this->loader->add_action('load-post.php', $session_manager, 'track_edit_start');

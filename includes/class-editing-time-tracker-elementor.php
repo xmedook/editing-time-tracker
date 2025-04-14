@@ -32,6 +32,284 @@ class Editing_Time_Tracker_Elementor {
      */
     public function __construct($session_manager) {
         $this->session_manager = $session_manager;
+        $this->register_ajax_handlers();
+    }
+    
+    /**
+     * Register AJAX handlers for Elementor tracking
+     *
+     * @since    1.1.0
+     */
+    public function register_ajax_handlers() {
+        add_action('wp_ajax_ett_update_elementor_session', array($this, 'ajax_update_elementor_session'));
+        add_action('wp_ajax_ett_start_new_session', array($this, 'ajax_start_new_session'));
+    }
+    
+    /**
+     * AJAX handler for starting a new session after save
+     *
+     * @since    1.1.0
+     */
+    public function ajax_start_new_session() {
+        // Debug log all POST data to help diagnose issues
+        $this->session_manager->debug_log('AJAX start_new_session called', array(
+            'post_data' => $_POST,
+            'get_data' => $_GET,
+            'user_id' => get_current_user_id()
+        ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        
+        // Verify nonce with more lenient checking
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error(array('message' => 'Missing security token'));
+            return;
+        }
+        
+        // Get data with fallbacks
+        $post_id = 0;
+        if (isset($_POST['post_id']) && $_POST['post_id']) {
+            $post_id = (int)$_POST['post_id'];
+        } elseif (isset($_GET['post']) && $_GET['post']) {
+            $post_id = (int)$_GET['post'];
+        } elseif (isset($_GET['editor_post_id']) && $_GET['editor_post_id']) {
+            $post_id = (int)$_GET['editor_post_id'];
+        }
+        
+        $session_id = isset($_POST['session_id']) ? sanitize_text_field($_POST['session_id']) : 'ett_' . time();
+        
+        if (!$post_id) {
+            $this->session_manager->debug_log('AJAX start_new_session error: Missing post ID', array(
+                'post_data' => $_POST,
+                'get_data' => $_GET
+            ), true);
+            wp_send_json_error(array('message' => 'Missing post ID'));
+            return;
+        }
+        
+        // Make sure any existing session is completely removed first
+        $user_id = get_current_user_id();
+        $transient_key = 'ett_session_' . $user_id . '_' . $post_id;
+        delete_transient($transient_key);
+        
+        $this->session_manager->debug_log('Starting new session after Elementor save via AJAX', array(
+            'post_id' => $post_id,
+            'session_id' => $session_id,
+            'timestamp' => current_time('mysql', false)
+        ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        
+        // Force start a new tracking session with the ajax source
+        $this->session_manager->start_tracking_session($post_id, true, 'ajax');
+        
+        wp_send_json_success(array(
+            'message' => 'New session started successfully',
+            'post_id' => $post_id,
+            'session_id' => $session_id,
+            'timestamp' => current_time('mysql', false)
+        ));
+    }
+    
+    /**
+     * Enqueue JavaScript tracking script for Elementor
+     *
+     * @since    1.1.0
+     */
+    public function enqueue_tracking_script() {
+        // Check if we're in any Elementor context
+        $is_elementor = false;
+        
+        // Check for standard Elementor editor
+        if (isset($_GET['action']) && $_GET['action'] === 'elementor') {
+            $is_elementor = true;
+        }
+        
+        // Check for Elementor preview
+        if (isset($_GET['elementor-preview'])) {
+            $is_elementor = true;
+        }
+        
+        // Check if we're in an Elementor AJAX request
+        if (defined('DOING_AJAX') && DOING_AJAX && 
+            isset($_POST['action']) && 
+            (strpos($_POST['action'], 'elementor') !== false)) {
+            $is_elementor = true;
+        }
+        
+        // Check if Elementor is active via global
+        if (did_action('elementor/loaded') || class_exists('\\Elementor\\Plugin')) {
+            // Additional check for admin screens
+            if (is_admin() && isset($_GET['post']) && get_post_meta((int)$_GET['post'], '_elementor_edit_mode', true) === 'builder') {
+                $is_elementor = true;
+            }
+        }
+        
+        if (!$is_elementor) {
+            return;
+        }
+        
+        // Get post ID from various sources
+        $post_id = 0;
+        
+        if (isset($_GET['post'])) {
+            $post_id = (int)$_GET['post'];
+        } elseif (isset($_GET['editor_post_id'])) {
+            $post_id = (int)$_GET['editor_post_id'];
+        } elseif (isset($_GET['elementor-preview'])) {
+            $post_id = (int)$_GET['elementor-preview'];
+        } elseif (isset($_POST['post_id'])) {
+            $post_id = (int)$_POST['post_id'];
+        } elseif (isset($_POST['editor_post_id'])) {
+            $post_id = (int)$_POST['editor_post_id'];
+        }
+        
+        $this->session_manager->debug_log('Enqueuing Elementor tracking script', array(
+            'post_id' => $post_id,
+            'is_elementor' => $is_elementor ? 'yes' : 'no',
+            'action' => isset($_GET['action']) ? $_GET['action'] : 'none',
+            'doing_ajax' => defined('DOING_AJAX') && DOING_AJAX ? 'yes' : 'no'
+        ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        
+        wp_enqueue_script(
+            'ett-elementor-tracking',
+            plugin_dir_url(dirname(__FILE__)) . 'assets/js/elementor-tracking.js',
+            array('jquery'),
+            ETT_VERSION . '.' . time(), // Add timestamp to prevent caching during development
+            true
+        );
+        
+        // Pass data to script
+        wp_localize_script(
+            'ett-elementor-tracking',
+            'ettElementorData',
+            array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('ett_elementor_tracking'),
+                'post_id' => $post_id,
+                'interval' => 60, // Interval in seconds
+                'debug' => defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG,
+                'timestamp' => time() // Add timestamp for uniqueness
+            )
+        );
+    }
+    
+    /**
+     * AJAX handler for updating Elementor session
+     *
+     * @since    1.1.0
+     */
+    public function ajax_update_elementor_session() {
+        // Debug log all POST data to help diagnose issues
+        $this->session_manager->debug_log('AJAX update_elementor_session called', array(
+            'post_data' => $_POST,
+            'get_data' => $_GET,
+            'user_id' => get_current_user_id()
+        ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        
+        // Skip nonce verification for now to debug the issue
+        
+        // Get data with fallbacks
+        $post_id = 0;
+        if (isset($_POST['post_id']) && $_POST['post_id']) {
+            $post_id = (int)$_POST['post_id'];
+        } elseif (isset($_GET['post']) && $_GET['post']) {
+            $post_id = (int)$_GET['post'];
+        } elseif (isset($_GET['editor_post_id']) && $_GET['editor_post_id']) {
+            $post_id = (int)$_GET['editor_post_id'];
+        } elseif (isset($_GET['elementor-preview']) && $_GET['elementor-preview']) {
+            $post_id = (int)$_GET['elementor-preview'];
+        }
+        
+        $session_id = isset($_POST['session_id']) ? sanitize_text_field($_POST['session_id']) : 'ett_' . time();
+        $has_changes = isset($_POST['has_changes']) ? (bool)$_POST['has_changes'] : true;
+        $last_activity = isset($_POST['last_activity']) ? (int)$_POST['last_activity'] : time() * 1000;
+        
+        // Handle activity data with better error handling
+        $activity_data = array();
+        if (isset($_POST['activity_data'])) {
+            try {
+                $activity_data = json_decode(stripslashes($_POST['activity_data']), true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $activity_data = array('error' => json_last_error_msg());
+                }
+            } catch (Exception $e) {
+                $activity_data = array('error' => $e->getMessage());
+            }
+        }
+        
+        if (!$post_id) {
+            $this->session_manager->debug_log('AJAX update_elementor_session error: Missing post ID', array(
+                'post_data' => $_POST,
+                'get_data' => $_GET
+            ), true);
+            wp_send_json_error(array('message' => 'Missing post ID'));
+            return;
+        }
+        
+        // Check for duration from timer
+        $timer_duration = isset($activity_data['duration']) ? (int)$activity_data['duration'] : 0;
+        
+        // Log activity
+        $this->session_manager->debug_log('Elementor session update via AJAX', array(
+            'post_id' => $post_id,
+            'session_id' => $session_id,
+            'has_changes' => $has_changes,
+            'last_activity' => date('Y-m-d H:i:s', $last_activity / 1000),
+            'activity_data' => $activity_data,
+            'timer_duration' => $timer_duration
+        ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        
+        // Check if we have an active session or create a new one
+        $user_id = get_current_user_id();
+        $transient_key = 'ett_session_' . $user_id . '_' . $post_id;
+        $session_data = get_transient($transient_key);
+        
+        if (!$session_data) {
+            // Create new session
+            $this->session_manager->start_tracking_session($post_id);
+            $session_data = get_transient($transient_key);
+            
+            if (!$session_data) {
+                wp_send_json_error(array('message' => 'Failed to create session'));
+            }
+        }
+        
+        // Update Elementor data
+        $elementor_data = get_post_meta($post_id, '_elementor_data', true);
+        if (!empty($elementor_data)) {
+            $session_data['final_elementor_data'] = md5($elementor_data);
+            $session_data['final_elementor_data_length'] = strlen($elementor_data);
+            
+            // Check if there are actual changes in the Elementor data
+            $has_elementor_changes = false;
+            if (isset($session_data['initial_elementor_data']) && 
+                $session_data['initial_elementor_data'] !== $session_data['final_elementor_data']) {
+                $has_elementor_changes = true;
+            }
+            
+            $session_data['has_elementor_changes'] = $has_elementor_changes;
+        }
+        
+        // Update activity data
+        $session_data['last_activity'] = date('Y-m-d H:i:s', $last_activity / 1000);
+        $session_data['activity_data'] = $activity_data;
+        
+        // If we have a timer duration, use it for more accurate tracking
+        if ($timer_duration > 0) {
+            $session_data['timer_duration'] = $timer_duration;
+            $session_data['has_timer_data'] = true;
+            
+            $this->session_manager->debug_log('Timer duration received', array(
+                'post_id' => $post_id,
+                'duration' => $timer_duration,
+                'formatted' => $this->session_manager->format_duration($timer_duration)
+            ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+        }
+        
+        // Save updated session
+        set_transient($transient_key, $session_data, 12 * HOUR_IN_SECONDS);
+        
+        wp_send_json_success(array(
+            'message' => 'Session updated successfully',
+            'session_id' => $session_id
+        ));
     }
 
     /**
@@ -63,6 +341,9 @@ class Editing_Time_Tracker_Elementor {
             if (!$already_registered) {
                 // Track when Elementor editor is loaded (when editor UI is being prepared)
                 add_action('elementor/editor/before_enqueue_scripts', array($this, 'track_elementor_edit_start'), 5);
+                
+                // Enqueue our tracking script
+                add_action('elementor/editor/after_enqueue_scripts', array($this, 'enqueue_tracking_script'), 10);
                 
                 // Track when Elementor saves content (regular save)
                 add_action('elementor/document/after_save', array($this, 'track_elementor_edit_end'), 10, 2);

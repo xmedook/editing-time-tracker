@@ -135,7 +135,12 @@ class Editing_Time_Tracker_DB {
             return false;
         }
         
-        return $wpdb->insert_id;
+        $session_id = $wpdb->insert_id;
+        
+        // Trigger action for integrations
+        do_action('ett_session_saved', $session_id, $data);
+        
+        return $session_id;
     }
 
     /**

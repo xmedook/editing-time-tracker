@@ -129,11 +129,30 @@ class Editing_Time_Tracker_Session_Manager {
             // Calculate duration in seconds
             $duration = $end_time->getTimestamp() - $start_time->getTimestamp();
             
+            // If we have timer data, use that for more accurate duration
+            if (isset($session_data['has_timer_data']) && $session_data['has_timer_data'] && 
+                isset($session_data['timer_duration']) && $session_data['timer_duration'] > 0) {
+                
+                $timer_duration = $session_data['timer_duration'];
+                
+                $this->debug_log('Using timer duration instead of calculated duration', array(
+                    'post_id' => $post_id,
+                    'calculated_duration' => $duration,
+                    'timer_duration' => $timer_duration,
+                    'difference' => $timer_duration - $duration
+                ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+                
+                // Use the timer duration instead
+                $duration = $timer_duration;
+            }
+            
             // Define minimum threshold for recording a session
             $min_duration = apply_filters('ett_min_duration_threshold', defined('ETT_MIN_SESSION_DURATION') ? ETT_MIN_SESSION_DURATION : 10);
             
             // For Elementor, check if there are changes in the Elementor data
             $has_significant_changes = false;
+            
+            // Check for Elementor data changes
             if (isset($session_data['has_elementor_changes']) && $session_data['has_elementor_changes']) {
                 $has_significant_changes = true;
                 $this->debug_log('Detected significant changes in Elementor data', array(
@@ -142,6 +161,22 @@ class Editing_Time_Tracker_Session_Manager {
                         $session_data['initial_elementor_data_length'] : 0,
                     'final_length' => isset($session_data['final_elementor_data_length']) ? 
                         $session_data['final_elementor_data_length'] : 0
+                ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+            }
+            
+            // Check for activity data from JavaScript tracking
+            $has_activity_data = isset($session_data['activity_data']) && 
+                                is_array($session_data['activity_data']) && 
+                                isset($session_data['activity_data']['changes']) && 
+                                $session_data['activity_data']['changes'] > 0;
+            
+            if ($has_activity_data) {
+                $has_significant_changes = true;
+                $this->debug_log('Detected changes from JavaScript tracking', array(
+                    'post_id' => $post_id,
+                    'changes' => $session_data['activity_data']['changes'],
+                    'elements_modified' => isset($session_data['activity_data']['elements_modified']) ? 
+                        count($session_data['activity_data']['elements_modified']) : 0
                 ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
             }
             
@@ -175,13 +210,26 @@ class Editing_Time_Tracker_Session_Manager {
                 $tracking_status = 'tracked_full';
             }
             
-            // Add information about Elementor changes to the activity summary
-            $elementor_changes_info = '';
+            // Add information about changes to the activity summary
+            $changes_info = '';
+            
+            // Add Elementor data changes info
             if (isset($session_data['has_elementor_changes']) && $session_data['has_elementor_changes']) {
                 $elementor_data_diff = isset($session_data['final_elementor_data_length']) && isset($session_data['initial_elementor_data_length']) ? 
                     $session_data['final_elementor_data_length'] - $session_data['initial_elementor_data_length'] : 0;
                 
-                $elementor_changes_info = sprintf(', Elementor data: %+d bytes', $elementor_data_diff);
+                $changes_info .= sprintf(', Elementor data: %+d bytes', $elementor_data_diff);
+            }
+            
+            // Add JavaScript tracking info
+            if ($has_activity_data) {
+                $changes_info .= sprintf(', JS tracked changes: %d', $session_data['activity_data']['changes']);
+                
+                if (isset($session_data['activity_data']['elements_modified']) && 
+                    is_array($session_data['activity_data']['elements_modified']) && 
+                    !empty($session_data['activity_data']['elements_modified'])) {
+                    $changes_info .= sprintf(', Elements modified: %d', count($session_data['activity_data']['elements_modified']));
+                }
             }
             
             // Prepare data for database insertion
@@ -191,10 +239,11 @@ class Editing_Time_Tracker_Session_Manager {
                 'start_time'           => $session_data['start_time'],
                 'end_time'             => $end_time->format('Y-m-d H:i:s'),
                 'duration'             => $duration,
-                'activity_summary'     => sprintf('%s %s: %s',
+                'activity_summary'     => sprintf('%s %s: %s%s',
                     $is_elementor_save ? 'Elementor edit' : 'Edited',
                     isset($session_data['post_type']) ? $session_data['post_type'] : $post->post_type,
-                    isset($session_data['post_title']) ? $session_data['post_title'] : $post->post_title
+                    isset($session_data['post_title']) ? $session_data['post_title'] : $post->post_title,
+                    $changes_info
                 )
             );
             
@@ -213,7 +262,9 @@ class Editing_Time_Tracker_Session_Manager {
                 'duration' => $duration,
                 'has_elementor_changes' => isset($session_data['has_elementor_changes']) ? $session_data['has_elementor_changes'] : false
             ), 30);
-
+            
+            // Always delete the session after recording it to prevent duplication
+            // The JavaScript will create a new session via AJAX if needed
             delete_transient($transient_key);
         } else {
             // No session data found - possibly expired or never started
@@ -229,9 +280,11 @@ class Editing_Time_Tracker_Session_Manager {
      * Start tracking a new editing session
      *
      * @since    1.0.0
-     * @param    int    $post_id    The post ID being edited
+     * @param    int     $post_id     The post ID being edited
+     * @param    bool    $force_new   Whether to force a new session even if one exists
+     * @param    string  $source      Source of the session start request
      */
-    public function start_tracking_session($post_id) {
+    public function start_tracking_session($post_id, $force_new = false, $source = 'standard') {
         if (!current_user_can('edit_posts')) {
             return;
         }
@@ -242,8 +295,25 @@ class Editing_Time_Tracker_Session_Manager {
         // Check if we already have a session
         $existing_session = get_transient($transient_key);
         
+        // If force_new is true, always create a new session
+        if ($force_new) {
+            $this->debug_log('Forcing creation of new session', array(
+                'post_id' => $post_id,
+                'user_id' => $user_id,
+                'had_existing_session' => $existing_session ? 'yes' : 'no',
+                'source' => $source
+            ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
+            
+            // Delete existing session without recording it again
+            // This prevents duplicate sessions
+            if ($existing_session) {
+                delete_transient($transient_key);
+            }
+            
+            $existing_session = false;
+        }
         // If session exists and is less than 5 minutes old, don't create a new one
-        if ($existing_session && isset($existing_session['start_time'])) {
+        else if ($existing_session && isset($existing_session['start_time'])) {
             $start_time = new DateTime($existing_session['start_time']);
             $now = new DateTime(current_time('mysql', false));
             $interval = $start_time->diff($now);
