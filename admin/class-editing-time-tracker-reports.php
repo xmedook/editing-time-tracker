@@ -68,7 +68,7 @@ class Editing_Time_Tracker_Reports {
      * @param    string    $hook    The current admin page
      */
     public function enqueue_reports_assets($hook) {
-        if ('tools_page_editing-time-reports' !== $hook) {
+        if ('toplevel_page_editing-time-tracker' !== $hook) {
             return;
         }
         

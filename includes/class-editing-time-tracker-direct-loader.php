@@ -74,6 +74,9 @@ class Editing_Time_Tracker_Direct_Loader {
             'hook' => current_action()
         ), defined('ETT_ELEMENTOR_DEBUG') && ETT_ELEMENTOR_DEBUG);
         
+        // Get settings
+        $inactivity_timeout = Editing_Time_Tracker_Settings::get_inactivity_timeout();
+        
         // Output the script directly
         ?>
         <script type="text/javascript">
@@ -87,7 +90,8 @@ class Editing_Time_Tracker_Direct_Loader {
                 post_id: <?php echo $post_id; ?>,
                 interval: 60,
                 debug: ettDebug,
-                timestamp: <?php echo time(); ?>
+                timestamp: <?php echo time(); ?>,
+                inactivity_timeout: <?php echo $inactivity_timeout; ?>
             };
             
             if (ettDebug) {
@@ -120,8 +124,12 @@ class Editing_Time_Tracker_Direct_Loader {
                 };
                 var saveInProgress = false;
                 var timerInterval = null;
+                var inactivityCheckInterval = null;
                 var sessionStartTime = null;
                 var buttonWasDisabled = true; // Track if the button was previously disabled
+                var isPaused = false; // Track if the timer is paused due to inactivity
+                var pausedTime = 0; // Track how much time has been paused
+                var pauseStartTime = null; // Track when the timer was paused
                 
                 // Variables para el timer visual
                 var timerSeconds = 0;
@@ -136,8 +144,81 @@ class Editing_Time_Tracker_Direct_Loader {
                     lastActivity = Date.now();
                     hasChanges = true;
                     
+                    // Resume timer if it was paused due to inactivity
+                    if (isPaused) {
+                        resumeTimer();
+                    }
+                    
                     if (ettElementorData.debug) {
                         console.log('ETT: Actividad detectada en el editor');
+                    }
+                }
+                
+                // Función para verificar inactividad
+                function checkInactivity() {
+                    if (!sessionStartTime || saveInProgress) return;
+                    
+                    var now = Date.now();
+                    var inactiveTime = now - lastActivity;
+                    
+                    // If inactive for more than the timeout, pause the timer
+                    if (!isPaused && inactiveTime > ettElementorData.inactivity_timeout * 1000) {
+                        pauseTimer();
+                    }
+                }
+                
+                // Función para pausar el timer
+                function pauseTimer() {
+                    if (isPaused || !timerInterval) return;
+                    
+                    isPaused = true;
+                    pauseStartTime = Date.now();
+                    
+                    // Stop the timer interval
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    
+                    // Update the timer display to show it's paused
+                    updateTimerDisplay(true);
+                    
+                    if (ettElementorData.debug) {
+                        console.log('ETT: Timer pausado por inactividad');
+                    }
+                }
+                
+                // Función para reanudar el timer
+                function resumeTimer() {
+                    if (!isPaused) return;
+                    
+                    // Calculate how long the timer was paused
+                    var pauseDuration = Date.now() - pauseStartTime;
+                    pausedTime += pauseDuration;
+                    
+                    isPaused = false;
+                    pauseStartTime = null;
+                    
+                    // Restart the timer interval
+                    timerInterval = setInterval(function() {
+                        timerSeconds++;
+                        
+                        if (timerSeconds >= 60) {
+                            timerSeconds = 0;
+                            timerMinutes++;
+                            
+                            if (timerMinutes >= 60) {
+                                timerMinutes = 0;
+                                timerHours++;
+                            }
+                        }
+                        
+                        updateTimerDisplay();
+                    }, 1000);
+                    
+                    // Update the timer display to show it's resumed
+                    updateTimerDisplay();
+                    
+                    if (ettElementorData.debug) {
+                        console.log('ETT: Timer reanudado después de inactividad');
                     }
                 }
                 
@@ -337,7 +418,7 @@ class Editing_Time_Tracker_Direct_Loader {
                 }
                 
                 // Actualizar el timer visual
-                function updateTimerDisplay() {
+                function updateTimerDisplay(paused = false) {
                     if (!$timerDisplay) {
                         $timerDisplay = createTimerDisplay();
                     }
@@ -348,7 +429,18 @@ class Editing_Time_Tracker_Direct_Loader {
                     var seconds = String(timerSeconds).padStart(2, '0');
                     
                     // Actualizar el display
-                    jQuery('#ett-timer-value').text(`${hours}:${minutes}:${seconds}`);
+                    var displayText = `${hours}:${minutes}:${seconds}`;
+                    if (paused) {
+                        displayText += ' (paused)';
+                        
+                        // Add paused styling
+                        jQuery('#ett-timer-display').css('background-color', 'rgba(150, 150, 150, 0.7)');
+                    } else {
+                        // Remove paused styling
+                        jQuery('#ett-timer-display').css('background-color', 'rgba(0, 0, 0, 0.7)');
+                    }
+                    
+                    jQuery('#ett-timer-value').text(displayText);
                 }
                 
                 // Iniciar el timer
@@ -361,6 +453,8 @@ class Editing_Time_Tracker_Direct_Loader {
                     timerSeconds = 0;
                     timerMinutes = 0;
                     timerHours = 0;
+                    pausedTime = 0;
+                    isPaused = false;
                     
                     updateTimerDisplay();
                     
@@ -380,6 +474,11 @@ class Editing_Time_Tracker_Direct_Loader {
                         updateTimerDisplay();
                     }, 1000);
                     
+                    // Start inactivity check
+                    if (!inactivityCheckInterval) {
+                        inactivityCheckInterval = setInterval(checkInactivity, 5000); // Check every 5 seconds
+                    }
+                    
                     if (ettElementorData.debug) {
                         console.log('ETT: Timer iniciado');
                     }
@@ -395,6 +494,14 @@ class Editing_Time_Tracker_Direct_Loader {
                             console.log('ETT: Timer detenido');
                         }
                     }
+                    
+                    // Stop inactivity check
+                    if (inactivityCheckInterval) {
+                        clearInterval(inactivityCheckInterval);
+                        inactivityCheckInterval = null;
+                    }
+                    
+                    isPaused = false;
                 }
                 
                 // Verificar el estado del botón de publicar
@@ -509,14 +616,17 @@ class Editing_Time_Tracker_Direct_Loader {
                     // Detener el timer
                     stopTimer();
                     
-                    // Calcular la duración total
-                    if (sessionStartTime) {
-                        var duration = Math.floor((Date.now() - sessionStartTime) / 1000);
-                        activityData.duration = duration;
-                        
-                        if (ettElementorData.debug) {
-                            console.log('ETT: Duración de la sesión: ' + duration + ' segundos');
-                        }
+                // Calcular la duración total
+                if (sessionStartTime) {
+                    // Calculate actual duration excluding paused time
+                    var totalElapsed = Date.now() - sessionStartTime;
+                    var actualDuration = Math.floor((totalElapsed - pausedTime) / 1000);
+                    activityData.duration = actualDuration;
+                    
+                    if (ettElementorData.debug) {
+                        console.log('ETT: Duración de la sesión: ' + actualDuration + ' segundos');
+                        console.log('ETT: Tiempo pausado: ' + Math.floor(pausedTime / 1000) + ' segundos');
+                    }
                         
                         // Mark this as a save operation
                         var saveData = {

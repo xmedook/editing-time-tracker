@@ -271,7 +271,7 @@ class Editing_Time_Tracker_AJAX_Handler {
         // Only record the session if explicitly requested (save operation)
         // and the duration is meaningful (to avoid duplicate/unnecessary sessions)
         $is_save_operation = isset($_POST['is_save']) && $_POST['is_save'];
-        $min_duration = apply_filters('ett_min_duration_threshold', 3); // Minimum 3 seconds
+        $min_duration = Editing_Time_Tracker_Settings::get_min_duration_threshold();
         
         if ($is_save_operation && $timer_duration >= $min_duration && $has_changes) {
             $post = get_post($post_id);

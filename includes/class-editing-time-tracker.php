@@ -129,6 +129,11 @@ class Editing_Time_Tracker {
         require_once ETT_PLUGIN_DIR . 'admin/class-editing-time-tracker-reports.php';
         
         /**
+         * The class responsible for settings functionality.
+         */
+        require_once ETT_PLUGIN_DIR . 'admin/class-editing-time-tracker-settings.php';
+        
+        /**
          * The class responsible for integrations with external services.
          */
         require_once ETT_PLUGIN_DIR . 'includes/class-editing-time-tracker-integrations.php';
@@ -174,8 +179,12 @@ class Editing_Time_Tracker {
         // Initialize the AJAX handler
         $ajax_handler = new Editing_Time_Tracker_AJAX_Handler($session_manager);
         
+        // Initialize the settings
+        $settings = new Editing_Time_Tracker_Settings($this->get_plugin_name(), $this->get_version());
+        
         // Admin menu and settings
         $this->loader->add_action('admin_menu', $plugin_admin, 'register_admin_menu');
+        $this->loader->add_action('admin_menu', $settings, 'register_settings_page');
         $this->loader->add_action('admin_notices', $plugin_admin, 'show_tracking_notices');
         
         // Enqueue admin styles and scripts

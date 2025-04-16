@@ -61,11 +61,24 @@ class Editing_Time_Tracker_Admin {
      * @since    1.0.0
      */
     public function register_admin_menu() {
-        add_management_page(
-            __('Editing Time Reports', 'editing-time-tracker'),
-            __('Editing Time Reports', 'editing-time-tracker'),
+        // Add top-level menu
+        add_menu_page(
+            __('Editing Time Tracker', 'editing-time-tracker'),
+            __('Editing Time', 'editing-time-tracker'),
             'manage_options',
-            'editing-time-reports',
+            'editing-time-tracker',
+            array($this, 'display_reports_page'),
+            'dashicons-clock',
+            30
+        );
+        
+        // Add reports as submenu
+        add_submenu_page(
+            'editing-time-tracker',
+            __('Editing Time Reports', 'editing-time-tracker'),
+            __('Reports', 'editing-time-tracker'),
+            'manage_options',
+            'editing-time-tracker',
             array($this, 'display_reports_page')
         );
     }
@@ -263,6 +276,26 @@ class Editing_Time_Tracker_Admin {
             array('jquery'),
             $this->version,
             false
+        );
+        
+        // Localize script with data
+        wp_localize_script(
+            $this->plugin_name,
+            'ettAdminData',
+            array(
+                'nonce' => wp_create_nonce('ett_admin_nonce'),
+                'reportsUrl' => admin_url('admin.php?page=editing-time-tracker'),
+                'strings' => array(
+                    'loading' => __('Loading...', 'editing-time-tracker'),
+                    'error' => __('Error loading data.', 'editing-time-tracker'),
+                    'noData' => __('No data available.', 'editing-time-tracker'),
+                    'totalTime' => __('Total Editing Time', 'editing-time-tracker'),
+                    'totalSessions' => __('Total Sessions', 'editing-time-tracker'),
+                    'lastEdited' => __('Last Edited', 'editing-time-tracker'),
+                    'lastEditedBy' => __('Last Edited By', 'editing-time-tracker'),
+                    'viewReport' => __('View Detailed Report', 'editing-time-tracker')
+                )
+            )
         );
     }
 }
